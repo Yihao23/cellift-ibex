@@ -13,7 +13,7 @@
  */
 long run_test(Testbench *tb, int simlen) {
   tb->module_->hart_id_i = 0;
-  tb->module_->boot_addr_i = 0;
+  tb->module_->boot_addr_i = 0x80000080;
 
   return tb_run_ticks(tb, simlen, true);
 }

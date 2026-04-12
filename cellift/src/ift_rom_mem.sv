@@ -120,11 +120,14 @@ module taint_rom #(
           // Only write the word to the (right-shifted) memory if this corresponds to the right bank.
           if (AddrOffset <= section_addr/* && (((section_addr-AddrOffset)/WidthBytes+i)%NumBanks == BankId)*/) begin
             memory[((section_addr-AddrOffset)/WidthBytes+i)/NumBanks] = word;
+            if (((section_addr-AddrOffset)/WidthBytes+i)/NumBanks == 32)
+              $display("WRITE_CHECK: writing memory[0x20]=%x, readback=%x", word, memory[32]);
             $display("Bank %d: loading addr/wbytes %x to boot rom addr %x: %x", BankId, section_addr/WidthBytes+i, ((section_addr-AddrOffset)/WidthBytes+i)/NumBanks, word);
           end
         end
       end
       $display("Done preloading boot rom ELF (bank %d).", BankId);
+      $display("VERIFY: memory[0x20]=%x memory[0x21]=%x memory[0x0]=%x", memory[32], memory[33], memory[0]);
     end
   end
 
@@ -133,8 +136,10 @@ module taint_rom #(
   //
 
   always_ff @(posedge clk_i) begin
-		if (csn == 0)
+		if (csn == 0) begin
       rdata <= memory[word_addr];
+      $display("ROM_READ: word_addr=%x rdata=%x", word_addr, memory[word_addr]);
+    end
   end
 
   //

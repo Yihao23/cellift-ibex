@@ -5,9 +5,12 @@
 module ibex_tiny_soc #(
     parameter int unsigned NumTaints = 1,
 
+    parameter logic [31:0] InstrMemOffset = 32'h80000000,
+    parameter logic [31:0] DataMemOffset  = 32'h80000000,
+
     // The two below must be equal.
-    parameter int unsigned InstrMemDepth = 1 << 15,
-    parameter int unsigned DataMemDepth  = 1 << 15,
+    parameter int unsigned InstrMemDepth = 1 << 17,
+    parameter int unsigned DataMemDepth  = 1 << 17,
     
 
     // Derived parameters
@@ -122,8 +125,8 @@ module ibex_tiny_soc #(
   //////////////////////////////
 
   notaint_rom #(
-    .AddrOffset(32'h0),
-    .ROM_ADDR_WIDTH(15),
+    .AddrOffset(InstrMemOffset),
+    .ROM_ADDR_WIDTH(17),
     .Width(32),
     .ByteAddressed(1'b0)
   ) i_instr_rom (
@@ -148,7 +151,8 @@ module ibex_tiny_soc #(
 
   noift_sram_mem #(
     .Width(32),
-    .Depth(DataMemDepth)
+    .Depth(DataMemDepth),
+    .AddrOffset(DataMemOffset)
   ) i_data_sram (
     .clk_i,
 

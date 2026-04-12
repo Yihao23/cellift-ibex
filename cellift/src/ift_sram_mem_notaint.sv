@@ -7,6 +7,7 @@
 module noift_sram_mem #(
   parameter int Width           = 32, // bit
   parameter int Depth           = 1 << 15,
+  parameter logic [31:0] AddrOffset = 32'h0,
 
   parameter bit PreloadELF = 1,
   parameter bit PreloadTaints = 1,
@@ -54,7 +55,9 @@ module noift_sram_mem #(
       void'(read_elf(binary));
       while (get_section(section_addr, section_len)) begin
         automatic int num_words = (section_len+(WidthBytes-1))/WidthBytes;
-        sections[section_addr/WidthBytes] = num_words;
+        if (AddrOffset <= section_addr) begin
+          sections[(section_addr-AddrOffset)/WidthBytes] = num_words;
+        end
         // buffer = new [num_words*WidthBytes];
         assert(num_words*WidthBytes >= PreloadBufferSize);
         void'(read_section(section_addr, buffer));
@@ -64,8 +67,10 @@ module noift_sram_mem #(
           for (int j = 0; j < WidthBytes; j++) begin
             word[j] = buffer[i*WidthBytes+j];
           end
-          $display("Writing ELF word to SRAM addr %x: %x", section_addr/WidthBytes+i, word);
-          mem[section_addr/WidthBytes+i] = word;
+          if (AddrOffset <= section_addr) begin
+            $display("Writing ELF word to SRAM addr %x: %x", (section_addr-AddrOffset)/WidthBytes+i, word);
+            mem[(section_addr-AddrOffset)/WidthBytes+i] = word;
+          end
         end
       end
     end
