@@ -24,6 +24,28 @@ RESOURCEWRAPPER_TAG ?= ibex
 TOP_MODULE = cellift_rv_core_ibex_mem_top
 TOP_EXECUTABLE_NAME = Vibex_tiny_soc
 
+# ORIGIN=1 → vanilla upstream CellIFT (PATH yosys, no bgeu mask, shared
+#            instrument.ys.tcl). Use this as the regression baseline.
+# ORIGIN=0 → in-tree cellift-yosys with the ibex-specific bgeu mask
+#            passes (cellift_inject_bgeu_mask_ibex + companion apply).
+#            Mirrors cv32e40x's ORIGIN switch.
+ORIGIN ?= 0
+REPO_ROOT := $(abspath $(CELLIFT_META_ROOT)/..)
+HARNESS_IBEX_DIR := $(REPO_ROOT)/harness/ibex-test
+ifeq ($(ORIGIN),1)
+YOSYS             ?= yosys
+INSTRUMENT_TCL    := $(CELLIFT_YS)/instrument.ys.tcl
+CELLIFT_EXTRA_ENV :=
+else
+YOSYS             ?= $(CELLIFT_META_ROOT)/tools/cellift-yosys/yosys
+INSTRUMENT_TCL    := $(HARNESS_IBEX_DIR)/instrument.ys.tcl
+CELLIFT_EXTRA_ENV := \
+	ENABLE_CELLIFT_PRECHECK=1 \
+	ENABLE_BGEU_MASK=1 \
+	BGEU_MASK_MANIFEST=$(HARNESS_IBEX_DIR)/bgeu_mask_ibex.yaml \
+	HARNESS_IBEX_DIR=$(HARNESS_IBEX_DIR)
+endif
+
 # The `passthrough` target is useful so that the log matches with the sv on the generated block names, typically for ideal taint experiments.
 TARGET_NAMES = vanilla cellift glift passthrough
 
@@ -82,8 +104,20 @@ generated/out/nosv2v.sv: generated/scattered/rv_core_ibex.v | generated/out
 
 YOSYS_INSTRUMENTATION_TARGETS_SV=$(patsubst %,generated/out/%.sv, cellift glift passthrough)
 
-$(YOSYS_INSTRUMENTATION_TARGETS_SV): generated/out/%.sv: $(CELLIFT_YS)/instrument.ys.tcl generated/sv2v_out.v | generated/out logs
-	DECOMPOSE_MEMORY=1 VERILOG_INPUT=$(word 2,$^) INSTRUMENTATION=$* VERILOG_OUTPUT=$@ TOP_MODULE=$(TOP_MODULE) $(CELLIFT_META_ROOT)/resourcewrapper $(RESOURCEWRAPPER_TAG) $* instr yosys -c $< -l $@.log
+$(YOSYS_INSTRUMENTATION_TARGETS_SV): generated/out/%.sv: $(INSTRUMENT_TCL) generated/sv2v_out.v | generated/out logs
+	DECOMPOSE_MEMORY=1 VERILOG_INPUT=$(word 2,$^) INSTRUMENTATION=$* VERILOG_OUTPUT=$@ TOP_MODULE=$(TOP_MODULE) $(CELLIFT_EXTRA_ENV) $(CELLIFT_META_ROOT)/resourcewrapper $(RESOURCEWRAPPER_TAG) $* instr $(YOSYS) -c $< -l $@.log
+
+# ORIGIN=0 only: extra dependencies / build rules for the ibex bgeu-mask
+# plugins. Placed AFTER the main rule above so $(YOSYS_INSTRUMENTATION_TARGETS_SV)
+# is already defined. Mirrors cellift-rocket/Makefile's plugin block.
+ifeq ($(ORIGIN),0)
+$(YOSYS_INSTRUMENTATION_TARGETS_SV): \
+    $(HARNESS_IBEX_DIR)/cellift_inject_bgeu_mask_ibex.so \
+    $(HARNESS_IBEX_DIR)/cellift_apply_taint_mask_ibex.so
+
+$(HARNESS_IBEX_DIR)/%.so: $(HARNESS_IBEX_DIR)/%.cc
+	$(MAKE) -C $(HARNESS_IBEX_DIR) $*.so
+endif
 #
 # Verilator simulation
 #
