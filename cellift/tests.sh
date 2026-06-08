@@ -40,6 +40,7 @@ if [ ! -f "$SIMROMELF" ] || [ ! -f "$SIMSRAMELF" ]; then
 fi
 
 export SIMSRAMTAINT=/work/import_from_hw_sw_fuzzer/unique_regs_meminit.txt
+export SIMROMTAINT=/work/import_from_hw_sw_fuzzer/unique_regs_meminit.txt
 
 env | sort
 mkdir -p /work/output_result
