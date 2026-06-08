@@ -173,7 +173,7 @@ module taint_rom #(
 
             // Only write the taint word to the (right-shifted) taint memory if this corresponds to the right bank.
             if (AddrOffset <= section_addr && (((section_addr-AddrOffset)/WidthBytes+i)%NumBanks == BankId)) begin
-              mem_taints[((section_addr-AddrOffset)/WidthBytes+i)/NumBanks][taint_id] = word;
+              mem_taints[((section_addr-AddrOffset)/WidthBytes+i)/NumBanks] |= word;
               $display("Bank %d: tainting addr/wbytes %x to boot rom addr %x: %x", BankId, section_addr/WidthBytes+i, ((section_addr-AddrOffset)/WidthBytes+i)/NumBanks, word);
             end
           end
