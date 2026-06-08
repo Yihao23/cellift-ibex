@@ -161,7 +161,9 @@ module rv_core_ibex_mem_top import tlul_pkg::*; #(
   );
 
 
-  rv_core_ibex i_rv_core_ibex (
+  rv_core_ibex #(
+    .RV32B(ibex_pkg::RV32BFull)
+  ) i_rv_core_ibex (
 
     // Regular signals
     .clk_i,
